@@ -1,17 +1,28 @@
 from typing import Union, Any, ClassVar, Dict, Optional, Tuple, Pattern, List
 
+import os
 import re
+import json
 import black
 import textwrap
 
 from sigma.conversion.state import ConversionState
 from sigma.conversion.deferred import DeferredQueryExpression
-from sigma.rule import SigmaRule, SigmaDetection, SigmaDetectionItem
+from sigma.rule import SigmaRule, SigmaDetection, SigmaDetectionItem, SigmaLogSource
 from sigma.conversion.base import TextQueryBackend, ProcessingPipeline
 from sigma.conditions import ConditionItem, ConditionAND, ConditionOR, ConditionNOT, ConditionFieldEqualsValueExpression
 from sigma.types import SigmaCompareExpression
 from sigma.exceptions import SigmaFeatureNotSupportedByBackendError
 
+
+def snake_case(s: str) -> str:
+    return "_".join(
+        re.sub(
+            "([A-Z][a-z]+)",
+            r" \1",
+            re.sub("([A-Z]+)", r" \1", s.replace("-", " ").replace(".", " ")),
+        ).split()
+    ).lower()
 
 class MatanoPythonBackend(TextQueryBackend):
     """Matano Python Backend for Sigma"""
@@ -129,7 +140,7 @@ class MatanoPythonBackend(TextQueryBackend):
 
         return super().convert_rule(rule, output_format)
 
-    def finalize_query_default(self, rule: SigmaRule, query: str, index: int, state: ConversionState) -> str:
+    def _format_query(self, query: str):
         final_query = """\
 import re, ipaddress
 from fnmatch import fnmatch
@@ -147,5 +158,69 @@ def detect(record):
 """
         return black.format_str(final_query, mode=black.FileMode(line_length=100))
 
+    def _format_logsource(self, ls: SigmaLogSource) -> Optional[str]:
+        ret = ".".join(
+            s for s in (ls.product, ls.category, ls.service) if s is not None
+        )
+        return ret
+
+    def finalize_query_default(self, rule: SigmaRule, query: str, index: int, state: ConversionState) -> str:
+        return self._format_query(query)
+
     def finalize_output_default(self, queries: List[str]) -> str:
         return list(queries)
+
+    def finalize_query_detection(self, rule: SigmaRule, query: str, index: int, state: ConversionState) -> Any:
+        final_query = self._format_query(query)
+        title = snake_case(rule.title)
+
+        _prefix = "\n    - "
+        wrapped_description = "\n".join(textwrap.wrap(rule.description, subsequent_indent="    "))
+
+        comment = f"""\
+description: {wrapped_description}
+id: {rule.id}
+status: {rule.status}
+author: {rule.author}
+date: {rule.date}
+references: {_prefix + _prefix.join(rule.references)}
+"""
+        comment = textwrap.indent(comment, "# ")
+
+        ret = {
+            "title": title,
+            "description": rule.description,
+            "detection_content": final_query,
+            "comment": comment,
+            "log_source": self._format_logsource(rule.logsource),
+        }
+        return ret
+
+    def finalize_output_detection(self, queries: List[Any]):
+        "Outputs rules as detection directories for Matano directory"
+
+        ret = []
+        for query in queries:
+            title = query["title"]
+            detection_dir = os.path.join(os.getcwd(), title)
+            os.makedirs(detection_dir, exist_ok=True)
+            with open(os.path.join(detection_dir, "detect.py"), "w") as det_f:
+                det_f.write(query["detection_content"])
+
+            log_sources = [query["log_source"]]
+
+            detection_yml_content = f"""\
+# This file was generated from a Sigma rule
+
+{query["comment"]}
+
+name: {json.dumps(query["title"])}
+log_sources: {json.dumps(log_sources)}
+"""
+
+            with open(os.path.join(detection_dir, "detection.yml"), "w") as config_f:
+                config_f.write(detection_yml_content)
+
+            ret.append(detection_dir)
+
+        return ret
