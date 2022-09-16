@@ -1,0 +1,141 @@
+# name: test_cidr
+  '''
+  import re, ipaddress
+  from fnmatch import fnmatch
+  
+  
+  def cidrmatch(ip, cidr):
+      return ipaddress.ip_address(ip) in ipaddress.ip_network(cidr)
+  
+  
+  def detect(record):
+      return cidrmatch(record.get("fieldB"), "192.168.0.0/14") and (
+          cidrmatch(record.get("fieldA"), "192.168.0.0/14")
+          or cidrmatch(record.get("fieldA"), "192.168.0.0/14")
+      )
+  
+  '''
+# ---
+# name: test_matano_and_expression
+  '''
+  import re, ipaddress
+  from fnmatch import fnmatch
+  
+  
+  def detect(record):
+      return record.get("fieldA") == "valueA" and record.get("fieldB") == "valueB"
+  
+  '''
+# ---
+# name: test_matano_and_or_expression
+  '''
+  import re, ipaddress
+  from fnmatch import fnmatch
+  
+  
+  def detect(record):
+      return (record.get("fieldA") in ("valueA1", "valueA2")) and (
+          record.get("fieldB") in ("valueB1", "valueB2")
+      )
+  
+  '''
+# ---
+# name: test_matano_cidr_query
+  '''
+  import re, ipaddress
+  from fnmatch import fnmatch
+  
+  
+  def cidrmatch(ip, cidr):
+      return ipaddress.ip_address(ip) in ipaddress.ip_network(cidr)
+  
+  
+  def detect(record):
+      return cidrmatch(record.get("field"), "192.168.0.0/16")
+  
+  '''
+# ---
+# name: test_matano_field_name_with_whitespace
+  '''
+  import re, ipaddress
+  from fnmatch import fnmatch
+  
+  
+  def cidrmatch(ip, cidr):
+      return ipaddress.ip_address(ip) in ipaddress.ip_network(cidr)
+  
+  
+  def detect(record):
+      return record.get("field\ name") == "value" and (
+          cidrmatch(record.get("fieldA"), "192.168.0.0/14")
+          or cidrmatch(record.get("fieldA"), "192.168.0.0/14")
+      )
+  
+  '''
+# ---
+# name: test_matano_in_expression
+  '''
+  import re, ipaddress
+  from fnmatch import fnmatch
+  
+  
+  def detect(record):
+      return (
+          record.get("fieldA") == "valueA"
+          or record.get("fieldA") == "valueB"
+          or record.get("fieldA").startswith("valueC")
+      )
+  
+  '''
+# ---
+# name: test_matano_or_and_expression
+  '''
+  import re, ipaddress
+  from fnmatch import fnmatch
+  
+  
+  def detect(record):
+      return (
+          record.get("fieldA") == "valueA1"
+          and record.get("fieldB") == "valueB1"
+          or record.get("fieldA") == "valueA2"
+          and record.get("fieldB") == "valueB2"
+      )
+  
+  '''
+# ---
+# name: test_matano_or_expression
+  '''
+  import re, ipaddress
+  from fnmatch import fnmatch
+  
+  
+  def detect(record):
+      return record.get("fieldA") == "valueA" or record.get("fieldB") == "valueB"
+  
+  '''
+# ---
+# name: test_matano_regex_query
+  '''
+  import re, ipaddress
+  from fnmatch import fnmatch
+  
+  
+  def detect(record):
+      return re.match(r"foo.*bar", record.get("fieldA")) and record.get("fieldB") == "foo"
+  
+  '''
+# ---
+# name: test_wildcards
+  '''
+  import re, ipaddress
+  from fnmatch import fnmatch
+  
+  
+  def detect(record):
+      return fnmatch(record.get("CommandLine"), "*netsh* wlan show profile*") or record.get(
+          "CommandLine"
+      ).contains("netsh wlan show profile")
+  
+  '''
+# ---

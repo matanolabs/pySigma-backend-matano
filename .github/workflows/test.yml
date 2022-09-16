@@ -1,0 +1,47 @@
+name: Test
+on:
+  push:
+    branches: [ "*" ]
+  pull_request:
+    branches: [ "*" ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ 'ubuntu-latest' ]
+        python-version: [ '3.8' ]
+        poetry-version: [ '1.2' ]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install Poetry
+        uses: abatilo/actions-poetry@v2.0.0
+        with:
+          poetry-version: ${{ matrix.poetry-version }}
+      - uses: actions/cache@v2
+        with:
+          path: ~/.cache/pypoetry/virtualenvs
+          key: ${{ runner.os }}-poetry-${{ hashFiles('poetry.lock') }}
+      - name: Install dependencies
+        run: poetry install
+      - name: Run tests
+        run: poetry run pytest --cov=sigma --cov-report term --cov-report xml:cov.xml -vv
+      - name: Store coverage for badge
+        if: ${{ runner.os == 'Linux' }}
+        run: poetry run python print-coverage.py >> $GITHUB_ENV
+      - name: Create coverage badge
+        if: ${{ github.repository == 'matanolabs/pySigma-backend-matano' && github.event_name == 'push' && runner.os == 'Linux' }}
+        uses: schneegans/dynamic-badges-action@v1.1.0
+        with:
+          auth: ${{ secrets.GIST_SECRET }}
+          gistID: 1101a863033a44ee97782f9f14a06eed
+          filename: matanolabs-pySigma-backend-matano.json
+          label: Coverage
+          message: ${{ env.COVERAGE }}
+          color: ${{ env.COVERAGE_COLOR }}
