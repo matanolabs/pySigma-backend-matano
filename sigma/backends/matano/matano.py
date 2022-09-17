@@ -75,7 +75,7 @@ class MatanoPythonBackend(TextQueryBackend):
     re_escape : ClassVar[Tuple[str]] = ()               # List of strings that are escaped
 
     # cidr expressions
-    cidr_expression : ClassVar[str] = "cidrmatch(record.get('{field}'), '{value}')"    # CIDR expression query as format string with placeholders {field} = {value}
+    cidr_expression : ClassVar[str] = "cidrmatch({field}, '{value}')"    # CIDR expression query as format string with placeholders {field} = {value}
 
     # Numeric comparison operators
     compare_op_expression : ClassVar[str] = "{field}{operator}{value}"  # Compare operation query as format string with placeholders {field}, {operator} and {value}
@@ -115,10 +115,6 @@ class MatanoPythonBackend(TextQueryBackend):
         super().__init__(processing_pipeline, collect_errors, **kwargs)
         self.used_cidr = False
 
-    def convert_condition_field_eq_val_cidr(self, cond : ConditionFieldEqualsValueExpression, state : ConversionState) -> Union[str, DeferredQueryExpression]:
-        self.used_cidr = True
-        return super().convert_condition_field_eq_val_cidr(cond, state)
-
     def escape_and_quote_field(self, field_name : str) -> str:
         val = super().escape_and_quote_field(field_name)
         parts = val.split(".")
@@ -132,6 +128,7 @@ class MatanoPythonBackend(TextQueryBackend):
         return ret
 
     def convert_condition_field_eq_val_cidr(self, cond: ConditionFieldEqualsValueExpression, state: ConversionState) -> Union[str, DeferredQueryExpression]:
+        self.used_cidr = True
         return self.cidr_expression.format(field=self.escape_and_quote_field(cond.field), value=str(cond.value.network))
 
     def convert_value_re(self, r, state: ConversionState):

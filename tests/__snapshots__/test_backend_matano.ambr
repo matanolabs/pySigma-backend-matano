@@ -83,7 +83,7 @@
       return (
           record.get("fieldA") == "valueA"
           or record.get("fieldA") == "valueB"
-          or record.get("fieldA").startswith("valueC")
+          or (record.get("fieldA") and record.get("fieldA").startswith("valueC"))
       )
   
   '''
@@ -133,9 +133,9 @@
   
   
   def detect(record):
-      return fnmatch(record.get("CommandLine"), "*netsh* wlan show profile*") or record.get(
-          "CommandLine"
-      ).contains("netsh wlan show profile")
+      return fnmatch(record.get("CommandLine"), "*netsh* wlan show profile*") or (
+          record.get("CommandLine") and "netsh wlan show profile" in record.get("CommandLine")
+      )
   
   '''
 # ---
