@@ -2,6 +2,7 @@ from typing import Union, Any, ClassVar, Dict, Optional, Tuple, Pattern, List
 
 import os
 import re
+import yaml
 import json
 import black
 import textwrap
@@ -13,7 +14,6 @@ from sigma.conversion.base import TextQueryBackend, ProcessingPipeline
 from sigma.conditions import ConditionItem, ConditionAND, ConditionOR, ConditionNOT, ConditionFieldEqualsValueExpression
 from sigma.types import SigmaCompareExpression
 from sigma.exceptions import SigmaFeatureNotSupportedByBackendError
-
 
 def snake_case(s: str) -> str:
     return "_".join(
@@ -174,22 +174,21 @@ def detect(record):
         final_query = self._format_query(query)
         title = snake_case(rule.title)
 
-        _prefix = "\n    - "
-        wrapped_description = "\n".join(textwrap.wrap(rule.description, subsequent_indent="    "))
+        comment_values = {
+            "description": rule.description,
+            "id": str(rule.id),
+            "status": str(rule.status),
+            "author": rule.author,
+            "date": str(rule.date),
+            "references": rule.references,
+        }
+        comment_values = { k: v for k,v in comment_values.items() if v is not None }
 
-        comment = f"""\
-description: {wrapped_description}
-id: {rule.id}
-status: {rule.status}
-author: {rule.author}
-date: {rule.date}
-references: {_prefix + _prefix.join(rule.references)}
-"""
+        comment = yaml.dump(comment_values, indent=4)
         comment = textwrap.indent(comment, "# ")
 
         ret = {
             "title": title,
-            "description": rule.description,
             "detection_content": final_query,
             "comment": comment,
             "log_source": self._format_logsource(rule.logsource),
