@@ -66,7 +66,7 @@ class MatanoPythonBackend(TextQueryBackend):
     # String matching operators. if none is appropriate eq_token is used.
     startswith_expression : ClassVar[str] = "({field} and {field}.startswith({value}))"
     endswith_expression   : ClassVar[str] = "({field} and {field}.endswith({value}))"
-    contains_expression   : ClassVar[str] = "({field} and {value} in {field})"
+    contains_expression   : ClassVar[str] = "{value} in {field}"
     wildcard_match_expression : ClassVar[str] = "fnmatch({field}, {value})"      # Special expression if wildcards can't be matched with the eq_token operator
 
     # Regular expressions
