@@ -64,9 +64,9 @@ class MatanoPythonBackend(TextQueryBackend):
     }
 
     # String matching operators. if none is appropriate eq_token is used.
-    startswith_expression : ClassVar[str] = "{field}.startswith({value})"
-    endswith_expression   : ClassVar[str] = "{field}.endswith({value})"
-    contains_expression   : ClassVar[str] = "{field}.contains({value})"
+    startswith_expression : ClassVar[str] = "({field} and {field}.startswith({value}))"
+    endswith_expression   : ClassVar[str] = "({field} and {field}.endswith({value}))"
+    contains_expression   : ClassVar[str] = "({field} and {value} in {field})"
     wildcard_match_expression : ClassVar[str] = "fnmatch({field}, {value})"      # Special expression if wildcards can't be matched with the eq_token operator
 
     # Regular expressions
@@ -121,7 +121,18 @@ class MatanoPythonBackend(TextQueryBackend):
 
     def escape_and_quote_field(self, field_name : str) -> str:
         val = super().escape_and_quote_field(field_name)
-        return f"record.get('{val}')"
+        parts = val.split(".")
+        ret = "record"
+        for i in range(len(parts)):
+            part = parts[i]
+            if i == len(parts) - 1:
+                ret += f".get('{part}')"
+            else:
+                ret += f".get('{part}', {{}})"
+        return ret
+
+    def convert_condition_field_eq_val_cidr(self, cond: ConditionFieldEqualsValueExpression, state: ConversionState) -> Union[str, DeferredQueryExpression]:
+        return self.cidr_expression.format(field=self.escape_and_quote_field(cond.field), value=str(cond.value.network))
 
     def convert_value_re(self, r, state: ConversionState):
         val = super().convert_value_re(r, state)
