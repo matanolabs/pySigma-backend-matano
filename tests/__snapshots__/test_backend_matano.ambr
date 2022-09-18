@@ -133,9 +133,9 @@
   
   
   def detect(record):
-      return fnmatch(record.get("CommandLine"), "*netsh* wlan show profile*") or (
-          record.get("CommandLine") and "netsh wlan show profile" in record.get("CommandLine")
-      )
+      return fnmatch(
+          record.get("CommandLine"), "*netsh* wlan show profile*"
+      ) or "netsh wlan show profile" in record.get("CommandLine")
   
   '''
 # ---
