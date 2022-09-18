@@ -2,6 +2,7 @@ from typing import Union, Any, ClassVar, Dict, Optional, Tuple, Pattern, List
 
 import os
 import re
+import sys
 import yaml
 import json
 import black
@@ -23,6 +24,10 @@ def snake_case(s: str) -> str:
             re.sub("([A-Z]+)", r" \1", s.replace("-", " ").replace(".", " ")),
         ).split()
     ).lower()
+
+def mkdir_if_not_exists(path: str):
+    if not os.path.exists(path):
+        os.makedirs(path, exist_ok=True)
 
 class MatanoPythonBackend(TextQueryBackend):
     """Matano Python Backend for Sigma"""
@@ -210,7 +215,7 @@ def detect(record):
         for query in queries:
             title = query["title"]
             detection_dir = os.path.join(os.getcwd(), title)
-            os.makedirs(detection_dir, exist_ok=True)
+            mkdir_if_not_exists(detection_dir)
             with open(os.path.join(detection_dir, "detect.py"), "w") as det_f:
                 det_f.write(query["detection_content"])
 
