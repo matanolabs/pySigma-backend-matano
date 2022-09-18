@@ -232,3 +232,20 @@ detection:
 """)
     with pytest.raises(SigmaFeatureNotSupportedByBackendError):
         matano_backend.convert(rule2)
+
+def test_output_detection(matano_backend: MatanoPythonBackend):
+    r1 = SigmaCollection.from_yaml("""
+title: Test
+status: test
+logsource:
+    category: test_category
+    product: test_product
+detection:
+    selection:
+        CommandLine:
+            - '*netsh* wlan show profile*'
+            - '*netsh wlan show profile*'
+    condition: selection
+""")
+    ret = matano_backend.convert(r1, "detection")
+    print(ret)
