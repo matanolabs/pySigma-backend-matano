@@ -172,7 +172,7 @@ def detect(record):
         return black.format_str(final_query, mode=black.FileMode(line_length=100))
 
     def _format_logsource(self, ls: SigmaLogSource) -> Optional[str]:
-        ret = ".".join(
+        ret = "_".join(
             s for s in (ls.product, ls.category, ls.service) if s is not None
         )
         return ret
