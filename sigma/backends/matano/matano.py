@@ -190,6 +190,7 @@ def detect(record):
         comment_values = {
             "description": rule.description,
             "id": str(rule.id),
+            "level": str(rule.level),
             "status": str(rule.status),
             "author": rule.author,
             "date": str(rule.date),
@@ -213,7 +214,7 @@ def detect(record):
 
         ret = []
         for query in queries:
-            title = query["title"]
+            title = query["title"].replace("/", "_")
             detection_dir = os.path.join(os.getcwd(), title)
             mkdir_if_not_exists(detection_dir)
             with open(os.path.join(detection_dir, "detect.py"), "w") as det_f:

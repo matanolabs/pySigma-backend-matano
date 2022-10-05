@@ -2,7 +2,7 @@
 name = "pySigma-backend-matano"
 version = "0.0.1"
 description = "Matano backend for pySigma. Convert Sigma rules into Matano detections."
-authors = ["Samrose Ahmed <samroseahmed@gmail.com>"]
+authors = ["Samrose Ahmed <samrose@matano.dev>"]
 license = "Apache-2.0"
 classifiers = [
     "Intended Audience :: Developers",
