@@ -1,6 +1,6 @@
 # name: test_cidr
   '''
-  import re, ipaddress
+  import re, json, functools, ipaddress
   from fnmatch import fnmatch
   
   
@@ -18,7 +18,7 @@
 # ---
 # name: test_matano_and_expression
   '''
-  import re, ipaddress
+  import re, json, functools, ipaddress
   from fnmatch import fnmatch
   
   
@@ -29,7 +29,7 @@
 # ---
 # name: test_matano_and_or_expression
   '''
-  import re, ipaddress
+  import re, json, functools, ipaddress
   from fnmatch import fnmatch
   
   
@@ -42,7 +42,7 @@
 # ---
 # name: test_matano_cidr_query
   '''
-  import re, ipaddress
+  import re, json, functools, ipaddress
   from fnmatch import fnmatch
   
   
@@ -57,7 +57,7 @@
 # ---
 # name: test_matano_field_name_with_whitespace
   '''
-  import re, ipaddress
+  import re, json, functools, ipaddress
   from fnmatch import fnmatch
   
   
@@ -75,7 +75,7 @@
 # ---
 # name: test_matano_in_expression
   '''
-  import re, ipaddress
+  import re, json, functools, ipaddress
   from fnmatch import fnmatch
   
   
@@ -90,7 +90,7 @@
 # ---
 # name: test_matano_or_and_expression
   '''
-  import re, ipaddress
+  import re, json, functools, ipaddress
   from fnmatch import fnmatch
   
   
@@ -106,7 +106,7 @@
 # ---
 # name: test_matano_or_expression
   '''
-  import re, ipaddress
+  import re, json, functools, ipaddress
   from fnmatch import fnmatch
   
   
@@ -117,7 +117,7 @@
 # ---
 # name: test_matano_regex_query
   '''
-  import re, ipaddress
+  import re, json, functools, ipaddress
   from fnmatch import fnmatch
   
   
@@ -128,7 +128,7 @@
 # ---
 # name: test_wildcards
   '''
-  import re, ipaddress
+  import re, json, functools, ipaddress
   from fnmatch import fnmatch
   
   

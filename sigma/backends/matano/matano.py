@@ -113,33 +113,51 @@ class MatanoPythonBackend(TextQueryBackend):
     deferred_start : ClassVar[str] = "\n| "               # String used as separator between main query and deferred parts
     deferred_separator : ClassVar[str] = "\n| "           # String used to join multiple deferred query parts
     deferred_only_query : ClassVar[str] = "*"            # String used as query if final query only contains deferred expression
- 
+
     field_quote = None
 
     def __init__(self, processing_pipeline: Optional[ProcessingPipeline] = None, collect_errors: bool = False, **kwargs):
         super().__init__(processing_pipeline, collect_errors, **kwargs)
-        self.used_cidr = False
+        self.used_json_loads = False
+
+    def _get_processing_pipeline_vars(self):
+        pipeline = self.processing_pipeline
+        if pipeline:
+            return pipeline.vars
+        else:
+            return {}
 
     def escape_and_quote_field(self, field_name : str) -> str:
         val = super().escape_and_quote_field(field_name)
+        jsonify_paths = self._get_processing_pipeline_vars().get("json_load_prefixes", [])
+        json_prefix = next((p for p in jsonify_paths if field_name.startswith(p)), None)
         parts = val.split(".")
         ret = "record"
         for i in range(len(parts)):
+            curpath = ".".join(parts[:i+1])
             part = parts[i]
+
+            is_jsonify = curpath == json_prefix
+
             if i == len(parts) - 1:
                 ret += f".get('{part}')"
             else:
-                ret += f".get('{part}', {{}})"
+                default = '""' if is_jsonify else "{}"
+                ret += f".get('{part}', {default})"
+
+            if curpath == json_prefix:
+                ret = f"json_loads({ret})"
+                self.used_json_loads = True
         return ret
 
     def convert_condition_field_eq_val_cidr(self, cond: ConditionFieldEqualsValueExpression, state: ConversionState) -> Union[str, DeferredQueryExpression]:
-        self.used_cidr = True
+        state.processing_state["used_cidr"] = True
         return self.cidr_expression.format(field=self.escape_and_quote_field(cond.field), value=str(cond.value.network))
 
     def convert_value_re(self, r, state: ConversionState):
         val = super().convert_value_re(r, state)
         return "r" + "'" + val + "'"
-    
+
     def is_keywords_detection(self, item: Union[SigmaDetectionItem, SigmaDetection]):
         if isinstance(item, SigmaDetectionItem):
             return item.is_keyword()
@@ -147,19 +165,26 @@ class MatanoPythonBackend(TextQueryBackend):
             return any(self.is_keywords_detection(x) for x in item.detection_items)
 
     def convert_rule(self, rule: SigmaRule, output_format: Optional[str] = None) -> List[Any]:
+        self.used_json_loads = False
         for detection in rule.detection.detections.values():
             if self.is_keywords_detection(detection):
                 raise SigmaFeatureNotSupportedByBackendError("Backend does not support keywords.")
 
         return super().convert_rule(rule, output_format)
 
-    def _format_query(self, query: str):
+    def _format_query(self, query: str, state: ConversionState):
         final_query = """\
-import re, ipaddress
+import re, json, functools, ipaddress
 from fnmatch import fnmatch
 """
+        if self.used_json_loads:
+            final_query += """\
+@functools.cache
+def json_loads(s):
+    return json.loads(s)
+"""
 
-        if self.used_cidr:
+        if state.processing_state.get("used_cidr"):
             final_query += """\
 def cidrmatch(ip, cidr):
     return ipaddress.ip_address(ip) in ipaddress.ip_network(cidr)
@@ -178,13 +203,13 @@ def detect(record):
         return ret
 
     def finalize_query_default(self, rule: SigmaRule, query: str, index: int, state: ConversionState) -> str:
-        return self._format_query(query)
+        return self._format_query(query, state)
 
     def finalize_output_default(self, queries: List[str]) -> str:
         return list(queries)
 
     def finalize_query_detection(self, rule: SigmaRule, query: str, index: int, state: ConversionState) -> Any:
-        final_query = self._format_query(query)
+        final_query = self._format_query(query, state)
         title = snake_case(rule.title)
 
         comment_values = {
@@ -228,7 +253,7 @@ def detect(record):
 {query["comment"]}
 
 name: {json.dumps(query["title"])}
-log_sources: {json.dumps(log_sources)}
+tables: {json.dumps(log_sources)}
 """
 
             with open(os.path.join(detection_dir, "detection.yml"), "w") as config_f:
