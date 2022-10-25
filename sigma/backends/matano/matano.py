@@ -32,6 +32,12 @@ def mkdir_if_not_exists(path: str):
 class MatanoPythonBackend(TextQueryBackend):
     """Matano Python Backend for Sigma"""
 
+    name: ClassVar[str] = "Matano Python Backend"
+    formats: Dict[str, str] = {
+        "default": "Plain Python detect.py file",
+        "detection": "Matano Detection directory format"
+    }
+
     # Operator precedence: tuple of Condition{AND,OR,NOT} in order of precedence.
     # The backend generates grouping if required
     precedence : ClassVar[Tuple[ConditionItem, ConditionItem, ConditionItem]] = (ConditionNOT, ConditionAND, ConditionOR)
@@ -210,9 +216,10 @@ def detect(record):
 
     def finalize_query_detection(self, rule: SigmaRule, query: str, index: int, state: ConversionState) -> Any:
         final_query = self._format_query(query, state)
-        title = snake_case(rule.title)
+        title = snake_case(rule.title).replace("/", "_")
+        tables = [self._format_logsource(rule.logsource)]
 
-        comment_values = {
+        metadata = {
             "description": rule.description,
             "id": str(rule.id),
             "level": str(rule.level),
@@ -221,16 +228,15 @@ def detect(record):
             "date": str(rule.date),
             "references": rule.references,
         }
-        comment_values = { k: v for k,v in comment_values.items() if v is not None }
-
-        comment = yaml.dump(comment_values, indent=4)
-        comment = textwrap.indent(comment, "# ")
+        metadata = { k: v for k,v in metadata.items() if v is not None }
 
         ret = {
-            "title": title,
+            "metadata": metadata,
+            "config": {
+                "name": title,
+                "tables": tables
+            },
             "detection_content": final_query,
-            "comment": comment,
-            "log_source": self._format_logsource(rule.logsource),
         }
         return ret
 
@@ -239,26 +245,28 @@ def detect(record):
 
         ret = []
         for query in queries:
-            title = query["title"].replace("/", "_")
+            title = query["config"]["name"]
             detection_dir = os.path.join(os.getcwd(), title)
             mkdir_if_not_exists(detection_dir)
             with open(os.path.join(detection_dir, "detect.py"), "w") as det_f:
                 det_f.write(query["detection_content"])
 
-            log_sources = [query["log_source"]]
+            metadata_str = yaml.dump(query["metadata"])
+            config_str = yaml.dump(query["config"])
 
             detection_yml_content = f"""\
 # This file was generated from a Sigma rule
 
-{query["comment"]}
+{metadata_str}
 
-name: {json.dumps(query["title"])}
-tables: {json.dumps(log_sources)}
+{config_str}
 """
 
             with open(os.path.join(detection_dir, "detection.yml"), "w") as config_f:
                 config_f.write(detection_yml_content)
 
             ret.append(detection_dir)
+
+            print(f"Generated a direction directory at {detection_dir}")
 
         return ret
